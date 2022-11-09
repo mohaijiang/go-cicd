@@ -56,6 +56,9 @@ func (a *ShellAction) Hook() error {
 	stack := a.ctx.Value(STACK).(map[string]interface{})
 
 	workdir, ok := stack["workdir"].(string)
+	if !ok {
+		return errors.New("workdir is empty")
+	}
 	fmt.Println(stack)
 
 	commands := []string{"sh", "-c", a.filename}

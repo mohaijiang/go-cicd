@@ -19,22 +19,29 @@ func main() {
 
 	var stack Stack
 
-	actionGit := pipeline.NewGitAction("https://gitee.com/mohaijiang/spring-boot-example.git", "master", ctx)
+	actionGit := pipeline.NewGitAction("https://gitee.com/mohaijiang/spring-boot-example.gitt", "master", ctx)
 	actionEnv := pipeline.NewDockerEnv("maven:3.5-jdk-8", ctx)
 	actionShell := pipeline.NewShellAction("mvn clean package -Dmaven.test.skip=true", ctx)
 
 	actions := []pipeline.ActionHandler{actionGit, actionEnv, actionShell}
 
-	// 1： 执行中 2：执行失败， 3： 执行成功
+	// 1：执行中 2：执行失败，3：执行成功
 	status := 1
 	for _, action := range actions {
 		err := action.Pre()
 		if err != nil {
+			fmt.Println("error:", "action.Pre() error: %v", err)
 			status = 2
 			break
 		}
+
 		stack.push(action)
 		err = action.Hook()
+		if err != nil {
+			fmt.Println("error:", "action.Hook() error: %v", err)
+			status = 2
+			break
+		}
 	}
 
 	for !stack.isEmpty() {
