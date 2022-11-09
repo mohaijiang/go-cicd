@@ -15,7 +15,7 @@ func (s *Stack) push(a pipeline.ActionHandler) {
 // 出栈
 func (s *Stack) pop() (pipeline.ActionHandler, error) {
 	if len(*s) == 0 {
-		return nil, errors.New("Empty Stack")
+		return nil, errors.New("empty stack")
 	}
 	a := *s
 	defer func() {
