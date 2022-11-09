@@ -11,6 +11,10 @@ import (
 
 func main() {
 	job := getJob()
+	for name := range job.Stages {
+		fmt.Println(name)
+	}
+
 	engine(job)
 }
 
@@ -22,22 +26,22 @@ func engine(job *model.Job) {
 	engineContext["workdir"] = "/tmp/example"
 	engineContext["name"] = job.Name
 
-	ctx, _ := context.WithCancel(context.WithValue(context.Background(), "stack", engineContext))
+	ctx, cancel := context.WithCancel(context.WithValue(context.Background(), "stack", engineContext))
 
 	var stack Stack
 
-	// actionGit := pipeline.NewGitAction("https://gitee.com/mohaijiang/spring-boot-example.gitt", "master", ctx)
-	// actionEnv := pipeline.NewDockerEnv("maven:3.5-jdk-8", ctx)
-	// actionShell := pipeline.NewShellAction("mvn clean package -Dmaven.test.skip=true", ctx)
-
-	// actions := []pipeline.ActionHandler{actionGit, actionEnv, actionShell}
-
-	// 1：执行中 2：执行失败，3：执行成功
+	// 1： 执行中 2：执行失败， 3： 执行成功
 	status := 1
 
-	for key, stage := range job.Stages {
-		fmt.Println("stage : ", key)
-		for _, step := range stage.Steps {
+	stagesList, err := StageSort(job)
+	if err != nil {
+		defer cancel()
+		panic(err)
+	}
+
+	for _, stageWapper := range stagesList {
+		fmt.Println("stage : ", stageWapper.Name)
+		for _, step := range stageWapper.Stage.Steps {
 			if step.RunsOn != "" {
 				action := pipeline.NewDockerEnv(step.RunsOn, ctx)
 				err := action.Pre()
@@ -108,4 +112,40 @@ func getJob() *model.Job {
 		fmt.Println(err.Error())
 	}
 	return &job
+}
+
+func StageSort(job *model.Job) ([]model.StageWrapper, error) {
+	stages := make(map[string]model.Stage)
+	for key, stage := range job.Stages {
+		stages[key] = stage
+	}
+
+	sortedMap := make(map[string]any)
+
+	stageList := make([]model.StageWrapper, 0)
+	for len(stages) > 0 {
+		last := len(stages)
+		for key, stage := range stages {
+			allContains := true
+			for _, needs := range stage.Needs {
+				_, ok := sortedMap[needs]
+				if !ok {
+					allContains = false
+				}
+			}
+			if allContains {
+				sortedMap[key] = ""
+				delete(stages, key)
+				stageList = append(stageList, model.NewStageWrapper(key, stage))
+			}
+		}
+
+		if len(stages) == last {
+			return nil, fmt.Errorf("cannot resolve dependency, %v", stages)
+		}
+
+	}
+
+	return stageList, nil
+
 }
