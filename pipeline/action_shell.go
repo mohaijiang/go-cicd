@@ -117,6 +117,6 @@ func (a *ShellAction) Hook() error {
 }
 
 func (a *ShellAction) Post() error {
-	//return os.Remove(a.command)
-	return nil
+	return os.Remove(a.command)
+	//return nil
 }
