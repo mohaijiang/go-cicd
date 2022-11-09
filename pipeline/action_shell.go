@@ -5,11 +5,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"strings"
-	"sync"
+	"syscall"
 )
 
 type ShellAction struct {
@@ -56,6 +55,9 @@ func (a *ShellAction) Hook() error {
 	stack := a.ctx.Value(STACK).(map[string]interface{})
 
 	workdir, ok := stack["workdir"].(string)
+	if !ok {
+		return errors.New("workdir is empty")
+	}
 	fmt.Println(stack)
 
 	commands := []string{"sh", "-c", a.filename}
@@ -72,44 +74,59 @@ func (a *ShellAction) Hook() error {
 	c := exec.CommandContext(a.ctx, commands[0], commands[1:]...) // mac linux
 	c.Dir = workdir
 	fmt.Println(strings.Join(commands, " "))
+
 	stdout, err := c.StdoutPipe()
-	//stderr, err := c.StderrPipe()
 	if err != nil {
 		return err
 	}
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func(wg *sync.WaitGroup) {
-		defer wg.Done()
-		reader := bufio.NewReader(stdout)
-		//errReader := bufio.NewReader(stderr)
+	stderr, err := c.StderrPipe()
+	if err != nil {
+		return err
+	}
+
+	go func() {
 		for {
-			// 其实这段去掉程序也会正常运行，只是我们就不知道到底什么时候Command被停止了，而且如果我们需要实时给web端展示输出的话，这里可以作为依据 取消展示
-			select {
-			// 检测到ctx.Done()之后停止读取
-			case <-a.ctx.Done():
-				if a.ctx.Err() != nil {
-					fmt.Printf("程序出现错误: %q", a.ctx.Err())
-				} else {
-					fmt.Println("程序被终止")
-				}
-				return
-			default:
-				//errString, err := errReader.ReadString('\n')
-				//if err != nil || err == io.EOF {
-				//	return
-				//}
-				//fmt.Print(errString)
-				readString, err := reader.ReadString('\n')
-				if err != nil || err == io.EOF {
+			// 其实这段去掉程序也会正常运行，只是我们就不知道到底什么时候 Command 被停止了，而且如果我们需要实时给 web 端展示输出的话，这里可以作为依据 取消展示
+			// 检测到 ctx.Done() 之后停止读取
+			<-a.ctx.Done()
+			if a.ctx.Err() != nil {
+				fmt.Printf("程序出现错误: %q", a.ctx.Err())
+			} else {
+				p := c.Process
+				if p == nil {
 					return
 				}
-				fmt.Print(readString)
+				// Kill by negative PID to kill the process group, which includes
+				// the top-level process we spawned as well as any subprocesses
+				// it spawned.
+				_ = syscall.Kill(-p.Pid, syscall.SIGKILL)
+				fmt.Println("程序被终止")
 			}
 		}
-	}(&wg)
+	}()
+
+	stdoutScanner := bufio.NewScanner(stdout)
+	stderrScanner := bufio.NewScanner(stderr)
+	go func() {
+		for stdoutScanner.Scan() {
+			fmt.Println(stdoutScanner.Text())
+		}
+	}()
+	go func() {
+		for stderrScanner.Scan() {
+			fmt.Println(stderrScanner.Text())
+		}
+	}()
+
 	err = c.Start()
-	wg.Wait()
+	if err != nil {
+		fmt.Println("command start error: ", err)
+	}
+
+	err = c.Wait()
+	if err != nil {
+		fmt.Println("command wait error: ", err)
+	}
 	return err
 }
 

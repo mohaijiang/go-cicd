@@ -41,7 +41,9 @@ func (e *DockerEnv) Pre() error {
 
 	_ = os.MkdirAll(workdirTmp, os.ModePerm)
 
-	commands := []string{"docker", "run", "-u", "501:20", "-t", "-d", "-v", workdir + ":" + workdir, "-v", workdirTmp + ":" + workdirTmp, "-w", workdir, e.Image, "cat"}
+	user := fmt.Sprintf("%d:%d", os.Getuid(), os.Getgid())
+
+	commands := []string{"docker", "run", "-u", user, "-t", "-d", "-v", workdir + ":" + workdir, "-v", workdirTmp + ":" + workdirTmp, "-w", workdir, e.Image, "cat"}
 	fmt.Println(strings.Join(commands, " "))
 	c := exec.Command(commands[0], commands[1:]...)
 	output, err := c.CombinedOutput()
