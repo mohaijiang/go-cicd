@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"path"
@@ -54,60 +53,49 @@ func (a *GitAction) Hook() error {
 	if err != nil {
 		return err
 	}
-	errout, err := c.StderrPipe()
+	stderr, err := c.StderrPipe()
 	if err != nil {
 		return err
 	}
 
-	// var wg sync.WaitGroup
-	// wg.Add(1)
 	go func() {
-		// defer wg.Done()
-		reader := bufio.NewReader(stdout)
-		errReader := bufio.NewReader(errout)
 		for {
 			// 其实这段去掉程序也会正常运行，只是我们就不知道到底什么时候 Command 被停止了，而且如果我们需要实时给 web 端展示输出的话，这里可以作为依据 取消展示
-			select {
 			// 检测到 ctx.Done() 之后停止读取
-			case <-a.ctx.Done():
-				if a.ctx.Err() != nil {
-					fmt.Printf("程序出现错误: %q", a.ctx.Err())
-				} else {
-					p := c.Process
-					if p == nil {
-						return
-					}
-					// Kill by negative PID to kill the process group, which includes
-					// the top-level process we spawned as well as any subprocesses
-					// it spawned.
-					_ = syscall.Kill(-p.Pid, syscall.SIGKILL)
-					fmt.Println("程序被终止")
-				}
-				return
-			default:
-				readString, err := reader.ReadString('\n')
-				fmt.Printf("标准输出：%s\n", readString)
-				if err != nil || err == io.EOF {
+			<-a.ctx.Done()
+			if a.ctx.Err() != nil {
+				fmt.Printf("程序出现错误: %q", a.ctx.Err())
+			} else {
+				p := c.Process
+				if p == nil {
 					return
 				}
-
-				errString, err := errReader.ReadString('\n')
-				fmt.Printf("标准错误：%s\n", errString)
-				if err != nil || err == io.EOF {
-					return
-				}
-
+				// Kill by negative PID to kill the process group, which includes
+				// the top-level process we spawned as well as any subprocesses
+				// it spawned.
+				_ = syscall.Kill(-p.Pid, syscall.SIGKILL)
+				fmt.Println("程序被终止")
 			}
 		}
+	}()
 
+	stdoutScanner := bufio.NewScanner(stdout)
+	stderrScanner := bufio.NewScanner(stderr)
+	go func() {
+		for stdoutScanner.Scan() {
+			fmt.Println(stdoutScanner.Text())
+		}
+	}()
+	go func() {
+		for stderrScanner.Scan() {
+			fmt.Println(stderrScanner.Text())
+		}
 	}()
 
 	err = c.Start()
 	if err != nil {
 		fmt.Println("command start error: ", err)
 	}
-
-	// wg.Wait()
 
 	err = c.Wait()
 	if err != nil {
