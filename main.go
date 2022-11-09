@@ -26,7 +26,7 @@ func engine(job *model.Job) {
 	engineContext["workdir"] = "/tmp/example"
 	engineContext["name"] = job.Name
 
-	ctx, cancel := context.WithCancel(context.WithValue(context.Background(), "stack", engineContext))
+	ctx, _ := context.WithCancel(context.WithValue(context.Background(), "stack", engineContext))
 
 	var stack Stack
 
@@ -35,7 +35,6 @@ func engine(job *model.Job) {
 
 	stagesList, err := StageSort(job)
 	if err != nil {
-		defer cancel()
 		panic(err)
 	}
 
@@ -96,7 +95,7 @@ func engine(job *model.Job) {
 	}
 
 	fmt.Println("status: ", status)
-	_ = os.RemoveAll(engineContext["hamsterRoot"].(string))
+	os.RemoveAll(engineContext["hamsterRoot"].(string))
 }
 
 func getJob() *model.Job {
