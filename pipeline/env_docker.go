@@ -79,6 +79,10 @@ func (e *DockerEnv) Post() error {
 
 	c = exec.Command("docker", "rm", "-f", e.containerId)
 	_, err = c.CombinedOutput()
+
+	stack := e.ctx.Value(STACK).(map[string]interface{})
+	stack["withEnv"] = []string{}
+
 	if err != nil {
 		return err
 	}
