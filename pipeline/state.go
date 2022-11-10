@@ -34,21 +34,12 @@ func (step *NotRunStep) execute(sm *StepMachine) {
 	sm.stepState = RunningInstance
 }
 
-type ActionHandler interface {
-	Pre() error
-	Hook() error
-	Post() error
-}
-
 // RunningStep 运行中状态
 type RunningStep struct {
-	handler ActionHandler
 }
 
-func NewRunningStep(handler ActionHandler) *RunningStep {
-	return &RunningStep{
-		handler: handler,
-	}
+func NewRunningStep() *RunningStep {
+	return &RunningStep{}
 }
 
 func (step *RunningStep) getState() State {
@@ -57,13 +48,7 @@ func (step *RunningStep) getState() State {
 
 func (step *RunningStep) execute(sm *StepMachine) {
 	// will not happen
-	err := step.handler.Hook()
-
-	if err != nil {
-		sm.stepState = FailInstance
-	} else {
-		sm.stepState = DoneInstance
-	}
+	sm.stepState = DoneInstance
 
 }
 

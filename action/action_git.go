@@ -1,4 +1,4 @@
-package pipeline
+package action
 
 import (
 	"bufio"
@@ -11,6 +11,7 @@ import (
 	"syscall"
 )
 
+// GitAction git clone
 type GitAction struct {
 	repository string
 	branch     string
@@ -28,6 +29,8 @@ func NewGitAction(repository, branch string, ctx context.Context) *GitAction {
 }
 
 func (a *GitAction) Pre() error {
+
+	//TODO ... 检验git 命令是否存在
 	return nil
 }
 

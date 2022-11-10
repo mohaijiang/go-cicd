@@ -1,4 +1,4 @@
-package pipeline
+package action
 
 import (
 	"bufio"
@@ -7,10 +7,12 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"state-example/util"
 	"strings"
 	"syscall"
 )
 
+// ShellAction 命令工作
 type ShellAction struct {
 	command  string
 	filename string
@@ -42,7 +44,7 @@ func (a *ShellAction) Pre() error {
 
 	_ = os.MkdirAll(workdirTmp, os.ModePerm)
 
-	a.filename = workdirTmp + "/" + randSeq(10) + ".sh"
+	a.filename = workdirTmp + "/" + util.RandSeq(10) + ".sh"
 
 	content := []byte("#!/bin/sh\nset -ex\n" + a.command)
 	err := os.WriteFile(a.filename, content, os.ModePerm)
@@ -132,5 +134,4 @@ func (a *ShellAction) Hook() error {
 
 func (a *ShellAction) Post() error {
 	return os.Remove(a.command)
-	//return nil
 }

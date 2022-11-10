@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"gopkg.in/yaml.v2"
 	"os"
+	"state-example/action"
 	"state-example/model"
 	"state-example/pipeline"
 )
@@ -26,14 +27,14 @@ func engine(job *model.Job) {
 	engineContext["workdir"] = "/tmp/example"
 	engineContext["name"] = job.Name
 
-	ctx, _ := context.WithCancel(context.WithValue(context.Background(), "stack", engineContext))
+	ctx, cancel := context.WithCancel(context.WithValue(context.Background(), "stack", engineContext))
 
 	var stack Stack
 
 	// 1： 执行中 2：执行失败， 3： 执行成功
 	status := 1
 
-	stagesList, err := StageSort(job)
+	stagesList, err := pipeline.StageSort(job)
 	if err != nil {
 		panic(err)
 	}
@@ -42,7 +43,7 @@ func engine(job *model.Job) {
 		fmt.Println("stage : ", stageWapper.Name)
 		for _, step := range stageWapper.Stage.Steps {
 			if step.RunsOn != "" {
-				action := pipeline.NewDockerEnv(step.RunsOn, ctx)
+				action := action.NewDockerEnv(step.RunsOn, ctx)
 				err := action.Pre()
 				if err != nil {
 					status = 2
@@ -57,7 +58,7 @@ func engine(job *model.Job) {
 				}
 			}
 			if step.Uses == "" {
-				action := pipeline.NewShellAction(step.Run, ctx)
+				action := action.NewShellAction(step.Run, ctx)
 				err := action.Pre()
 				if err != nil {
 					status = 2
@@ -72,7 +73,7 @@ func engine(job *model.Job) {
 				}
 			}
 			if step.Uses == "git-checkout" {
-				action := pipeline.NewGitAction(step.With["url"], step.With["branch"], ctx)
+				action := action.NewGitAction(step.With["url"], step.With["branch"], ctx)
 				err := action.Pre()
 				if err != nil {
 					status = 2
@@ -86,12 +87,18 @@ func engine(job *model.Job) {
 					break
 				}
 			}
-
-			for !stack.isEmpty() {
-				action, _ := stack.pop()
-				_ = action.Post()
-			}
 		}
+		for !stack.isEmpty() {
+			action, _ := stack.pop()
+			_ = action.Post()
+		}
+
+		if status == 2 {
+			stageWapper.Status = 2
+			cancel()
+			break
+		}
+		stageWapper.Status = 3
 	}
 
 	fmt.Println("status: ", status)
@@ -111,40 +118,4 @@ func getJob() *model.Job {
 		fmt.Println(err.Error())
 	}
 	return &job
-}
-
-func StageSort(job *model.Job) ([]model.StageWrapper, error) {
-	stages := make(map[string]model.Stage)
-	for key, stage := range job.Stages {
-		stages[key] = stage
-	}
-
-	sortedMap := make(map[string]any)
-
-	stageList := make([]model.StageWrapper, 0)
-	for len(stages) > 0 {
-		last := len(stages)
-		for key, stage := range stages {
-			allContains := true
-			for _, needs := range stage.Needs {
-				_, ok := sortedMap[needs]
-				if !ok {
-					allContains = false
-				}
-			}
-			if allContains {
-				sortedMap[key] = ""
-				delete(stages, key)
-				stageList = append(stageList, model.NewStageWrapper(key, stage))
-			}
-		}
-
-		if len(stages) == last {
-			return nil, fmt.Errorf("cannot resolve dependency, %v", stages)
-		}
-
-	}
-
-	return stageList, nil
-
 }
