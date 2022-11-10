@@ -16,7 +16,7 @@ import (
 )
 
 func TestLogger(t *testing.T) {
-	Init().StdoutAndFile().Level(logrus.TraceLevel)
+	Init().ToStdoutAndFile().SetLevel(logrus.TraceLevel)
 	Trace("info")
 	Tracef("info %s", "hello")
 	Debug("info")
@@ -27,4 +27,13 @@ func TestLogger(t *testing.T) {
 	Warnf("info %s", "hello")
 	Error("info")
 	Errorf("info %s", "hello")
+}
+
+func TestToMemory(t *testing.T) {
+	Init().ToMemory().SetLevel(logrus.TraceLevel)
+	Trace("hello")
+	mem := Buffer()
+	if mem.Len() == 0 {
+		t.Fatal("error")
+	}
 }

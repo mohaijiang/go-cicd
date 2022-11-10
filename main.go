@@ -13,7 +13,7 @@ import (
 )
 
 func main() {
-	logger.Init().StdoutAndFile().Level(logrus.TraceLevel)
+	logger.Init().ToStdoutAndFileAndMemory().SetLevel(logrus.TraceLevel)
 	job := getJob()
 	for name := range job.Stages {
 		logger.Info(name)
