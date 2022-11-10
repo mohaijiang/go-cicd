@@ -103,6 +103,27 @@ func Buffer() *bytes.Buffer {
 	return l.mem
 }
 
+func ClearBuffer() {
+	if l.mem == nil {
+		return
+	}
+	l.mem.Reset()
+}
+
+func AutoClearBuffer(len int) {
+	if l.mem == nil {
+		return
+	}
+	go func(len int) {
+		for {
+			time.Sleep(time.Second * 1)
+			if l.mem.Len() > len {
+				ClearBuffer()
+			}
+		}
+	}(len)
+}
+
 func (l *Logger) makeLogDir() {
 	err := os.MkdirAll("log", os.ModePerm)
 	if err != nil {
