@@ -3,17 +3,21 @@ package main
 import (
 	"context"
 	"fmt"
-	"gopkg.in/yaml.v2"
 	"os"
+	"state-example/logger"
 	"state-example/action"
 	"state-example/model"
 	"state-example/pipeline"
+
+	"github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v2"
 )
 
 func main() {
+	logger.Init().ToStdoutAndFileAndMemory().SetLevel(logrus.TraceLevel)
 	job := getJob()
 	for name := range job.Stages {
-		fmt.Println(name)
+		logger.Info(name)
 	}
 
 	engine(job)
@@ -31,7 +35,7 @@ func engine(job *model.Job) {
 
 	var stack Stack
 
-	// 1： 执行中 2：执行失败， 3： 执行成功
+	// 1：执行中 2：执行失败，3：执行成功
 	status := 1
 
 	stagesList, err := pipeline.StageSort(job)
