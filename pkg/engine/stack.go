@@ -1,8 +1,8 @@
-package main
+package engine
 
 import (
 	"errors"
-	"state-example/pipeline"
+	"state-example/pkg/pipeline"
 )
 
 type Stack []pipeline.ActionHandler
