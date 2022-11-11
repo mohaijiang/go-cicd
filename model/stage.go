@@ -6,9 +6,8 @@ type Stage struct {
 }
 
 type StageWrapper struct {
-	Name   string
-	Stage  Stage
-	Status int // default 0
+	Name  string
+	Stage Stage
 }
 
 func NewStageWrapper(name string, stage Stage) StageWrapper {

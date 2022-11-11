@@ -1,13 +1,13 @@
 package pipeline
 
 import (
-	"fmt"
 	"gopkg.in/yaml.v2"
 	"io"
 	"os"
 	"state-example/model"
 )
 
+// GetJob 根据文件获取job信息
 func GetJob(path string) (*model.Job, error) {
 	file, err := os.Open(path)
 	if err != nil {
@@ -16,6 +16,7 @@ func GetJob(path string) (*model.Job, error) {
 	return GetJobFromReader(file)
 }
 
+// GetJobFromReader 根据流获取Job 信息
 func GetJobFromReader(reader io.Reader) (*model.Job, error) {
 	yamlFile, err := io.ReadAll(reader)
 	if err != nil {
@@ -26,40 +27,4 @@ func GetJobFromReader(reader io.Reader) (*model.Job, error) {
 	err = yaml.Unmarshal(yamlFile, &job)
 
 	return &job, err
-}
-
-func StageSort(job *model.Job) ([]model.StageWrapper, error) {
-	stages := make(map[string]model.Stage)
-	for key, stage := range job.Stages {
-		stages[key] = stage
-	}
-
-	sortedMap := make(map[string]any)
-
-	stageList := make([]model.StageWrapper, 0)
-	for len(stages) > 0 {
-		last := len(stages)
-		for key, stage := range stages {
-			allContains := true
-			for _, needs := range stage.Needs {
-				_, ok := sortedMap[needs]
-				if !ok {
-					allContains = false
-				}
-			}
-			if allContains {
-				sortedMap[key] = ""
-				delete(stages, key)
-				stageList = append(stageList, model.NewStageWrapper(key, stage))
-			}
-		}
-
-		if len(stages) == last {
-			return nil, fmt.Errorf("cannot resolve dependency, %v", stages)
-		}
-
-	}
-
-	return stageList, nil
-
 }

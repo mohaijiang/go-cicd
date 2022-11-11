@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"state-example/logger"
 	"state-example/action"
+	"state-example/logger"
 	"state-example/model"
-	"state-example/pipeline"
+	"state-example/util"
 
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
@@ -33,12 +33,12 @@ func engine(job *model.Job) {
 
 	ctx, cancel := context.WithCancel(context.WithValue(context.Background(), "stack", engineContext))
 
-	var stack Stack
+	var stack util.Stack[action.ActionHandler]
 
 	// 1：执行中 2：执行失败，3：执行成功
 	status := 1
 
-	stagesList, err := pipeline.StageSort(job)
+	stagesList, err := job.StageSort()
 	if err != nil {
 		panic(err)
 	}
@@ -54,7 +54,7 @@ func engine(job *model.Job) {
 					fmt.Println(err)
 					break
 				}
-				stack.push(action)
+				stack.Push(action)
 				err = action.Hook()
 				if err != nil {
 					status = 2
@@ -69,7 +69,7 @@ func engine(job *model.Job) {
 					fmt.Println(err)
 					break
 				}
-				stack.push(action)
+				stack.Push(action)
 				err = action.Hook()
 				if err != nil {
 					status = 2
@@ -84,7 +84,7 @@ func engine(job *model.Job) {
 					fmt.Println(err)
 					break
 				}
-				stack.push(action)
+				stack.Push(action)
 				err = action.Hook()
 				if err != nil {
 					status = 2
@@ -92,17 +92,15 @@ func engine(job *model.Job) {
 				}
 			}
 		}
-		for !stack.isEmpty() {
-			action, _ := stack.pop()
+		for !stack.IsEmpty() {
+			action, _ := stack.Pop()
 			_ = action.Post()
 		}
 
 		if status == 2 {
-			stageWapper.Status = 2
 			cancel()
 			break
 		}
-		stageWapper.Status = 3
 	}
 
 	fmt.Println("status: ", status)
