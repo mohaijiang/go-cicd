@@ -1,4 +1,4 @@
-package pipeline
+package action
 
 import (
 	"bufio"
@@ -13,6 +13,7 @@ import (
 	"syscall"
 )
 
+// ShellAction 命令工作
 type ShellAction struct {
 	command  string
 	filename string
