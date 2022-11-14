@@ -6,11 +6,8 @@ import (
 	"errors"
 	"os"
 	"os/exec"
-<<<<<<<< HEAD:pkg/action/action_shell.go
-========
 	"state-example/pkg/logger"
 	"state-example/pkg/stream"
->>>>>>>> origin/main:pkg/pipeline/action_shell.go
 	"state-example/pkg/utils"
 	"strings"
 	"syscall"
