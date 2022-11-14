@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"state-example/util"
+	"state-example/pkg/utils"
 	"strings"
 	"syscall"
 )
@@ -44,7 +44,7 @@ func (a *ShellAction) Pre() error {
 
 	_ = os.MkdirAll(workdirTmp, os.ModePerm)
 
-	a.filename = workdirTmp + "/" + util.RandSeq(10) + ".sh"
+	a.filename = workdirTmp + "/" + utils.RandSeq(10) + ".sh"
 
 	content := []byte("#!/bin/sh\nset -ex\n" + a.command)
 	err := os.WriteFile(a.filename, content, os.ModePerm)

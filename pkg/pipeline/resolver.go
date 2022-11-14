@@ -4,7 +4,7 @@ import (
 	"gopkg.in/yaml.v2"
 	"io"
 	"os"
-	"state-example/model"
+	"state-example/pkg/model"
 )
 
 // GetJob 根据文件获取job信息

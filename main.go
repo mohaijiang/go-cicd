@@ -3,14 +3,13 @@ package main
 import (
 	"context"
 	"fmt"
-	"os"
-	"state-example/action"
-	"state-example/logger"
-	"state-example/model"
-	"state-example/util"
-
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
+	"os"
+	action2 "state-example/pkg/action"
+	"state-example/pkg/logger"
+	"state-example/pkg/model"
+	"state-example/pkg/utils"
 )
 
 func main() {
@@ -33,7 +32,7 @@ func engine(job *model.Job) {
 
 	ctx, cancel := context.WithCancel(context.WithValue(context.Background(), "stack", engineContext))
 
-	var stack util.Stack[action.ActionHandler]
+	var stack utils.Stack[action2.ActionHandler]
 
 	// 1：执行中 2：执行失败，3：执行成功
 	status := 1
@@ -47,7 +46,7 @@ func engine(job *model.Job) {
 		fmt.Println("stage : ", stageWapper.Name)
 		for _, step := range stageWapper.Stage.Steps {
 			if step.RunsOn != "" {
-				action := action.NewDockerEnv(step.RunsOn, ctx)
+				action := action2.NewDockerEnv(step.RunsOn, ctx)
 				err := action.Pre()
 				if err != nil {
 					status = 2
@@ -62,7 +61,7 @@ func engine(job *model.Job) {
 				}
 			}
 			if step.Uses == "" {
-				action := action.NewShellAction(step.Run, ctx)
+				action := action2.NewShellAction(step.Run, ctx)
 				err := action.Pre()
 				if err != nil {
 					status = 2
@@ -77,7 +76,7 @@ func engine(job *model.Job) {
 				}
 			}
 			if step.Uses == "git-checkout" {
-				action := action.NewGitAction(step.With["url"], step.With["branch"], ctx)
+				action := action2.NewGitAction(step.With["url"], step.With["branch"], ctx)
 				err := action.Pre()
 				if err != nil {
 					status = 2

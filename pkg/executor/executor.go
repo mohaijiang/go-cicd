@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"state-example/action"
-	"state-example/model"
-	"state-example/util"
+	action2 "state-example/pkg/action"
+	"state-example/pkg/model"
+	"state-example/pkg/utils"
 )
 
 type IExecutor interface {
@@ -66,9 +66,9 @@ func (e *Executor) Execute(id int, job *model.Job) error {
 	e.cancelMap[job.Name] = cancel
 
 	// 队列堆栈
-	var stack util.Stack[action.ActionHandler]
+	var stack utils.Stack[action2.ActionHandler]
 
-	executeAction := func(ah action.ActionHandler, job model.JobWrapper) error {
+	executeAction := func(ah action2.ActionHandler, job model.JobWrapper) error {
 		if jobWrapper.Status != model.STATUS_RUNNING {
 			return nil
 		}
@@ -91,17 +91,17 @@ func (e *Executor) Execute(id int, job *model.Job) error {
 		//TODO ... stage的输出也需要换成堆栈方式
 		fmt.Println("stage : ", stageWapper.Name)
 		for _, step := range stageWapper.Stage.Steps {
-			var ah action.ActionHandler
+			var ah action2.ActionHandler
 			if step.RunsOn != "" {
-				ah = action.NewDockerEnv(step.RunsOn, ctx)
+				ah = action2.NewDockerEnv(step.RunsOn, ctx)
 				err = executeAction(ah, jobWrapper)
 			}
 			if step.Uses == "" {
-				ah = action.NewShellAction(step.Run, ctx)
+				ah = action2.NewShellAction(step.Run, ctx)
 				err = executeAction(ah, jobWrapper)
 			}
 			if step.Uses == "git-checkout" {
-				ah = action.NewGitAction(step.With["url"], step.With["branch"], ctx)
+				ah = action2.NewGitAction(step.With["url"], step.With["branch"], ctx)
 				err = executeAction(ah, jobWrapper)
 			}
 

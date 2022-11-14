@@ -1,9 +1,9 @@
 package executor
 
 import (
-	"state-example/logger"
-	"state-example/model"
-	"state-example/pipeline"
+	"state-example/pkg/logger"
+	"state-example/pkg/model"
+	"state-example/pkg/pipeline"
 )
 
 func NewExecutorClient(channel chan model.QueueMessage) *ExecutorClient {
